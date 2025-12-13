@@ -73,6 +73,11 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/users", verifyFBToken, async (req, res) => {
+      const result = await userCollections.find().toArray();
+      res.status(200).send(result);
+    });
+
     // Requests
     app.post("/requests", verifyFBToken, async (req, res) => {
       const data = req.body;
