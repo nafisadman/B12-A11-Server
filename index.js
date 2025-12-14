@@ -65,7 +65,7 @@ async function run() {
     app.post("/users", async (req, res) => {
       const userInfo = req.body;
       userInfo.createdAt = new Date();
-      userInfo.role = "donor";
+      userInfo.role = "Donor";
       userInfo.status = "active";
 
       const result = await userCollections.insertOne(userInfo);
@@ -94,6 +94,21 @@ async function run() {
       console.log(result);
       res.send(result);
     });
+
+    app.patch("/update/user/status", verifyFBToken, async (req, res) => {
+      const { email, status } = req.query;
+      const query = { email: email };
+
+      const updateStatus = {
+        $set: {
+          status: status,
+        },
+      };
+
+      const result = await userCollections.updateOne(query, updateStatus);
+      res.send(result);
+    });
+
     await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
