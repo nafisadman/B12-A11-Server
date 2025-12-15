@@ -86,6 +86,20 @@ async function run() {
       res.send(result);
     });
 
+    // My Donation Requests
+    app.get(
+      "/my-donation-requests",
+      verifyFBToken,
+      async (req, res) => {
+        const email = req.decoded_email;
+        console.log('req.decoded_email: ', req.decoded_email); // Quick Sanity Check
+        const query = { requesterEmail: email };
+
+        const result = await requestCollections.find(query).toArray();
+        res.send(result);
+      }
+    );
+
     app.get(`/users/role/:email`, async (req, res) => {
       const { email } = req.params;
 
