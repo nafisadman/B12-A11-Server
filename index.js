@@ -100,6 +100,8 @@ async function run() {
         .skip(page * size)
         .toArray();
 
+      const totalRequest = await requestCollections.countDocuments(query);
+
       res.send({ result: result, totalRequest });
     });
 
