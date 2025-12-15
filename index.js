@@ -87,18 +87,21 @@ async function run() {
     });
 
     // My Donation Requests
-    app.get(
-      "/my-donation-requests",
-      verifyFBToken,
-      async (req, res) => {
-        const email = req.decoded_email;
-        console.log('req.decoded_email: ', req.decoded_email); // Quick Sanity Check
-        const query = { requesterEmail: email };
+    app.get("/my-donation-requests", verifyFBToken, async (req, res) => {
+      const email = req.decoded_email;
+      const page = Number(req.query.page);
+      const size = Number(req.query.size);
 
-        const result = await requestCollections.find(query).toArray();
-        res.send(result);
-      }
-    );
+      const query = { requesterEmail: email };
+
+      const result = await requestCollections
+        .find(query)
+        .limit(size)
+        .skip(page * size)
+        .toArray();
+
+      res.send({ result: result, totalRequest });
+    });
 
     app.get(`/users/role/:email`, async (req, res) => {
       const { email } = req.params;
