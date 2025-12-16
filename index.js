@@ -21,7 +21,6 @@ const verifyFBToken = async (req, res, next) => {
   try {
     const idToken = token.split(" ")[1];
     const decoded = await admin.auth().verifyIdToken(idToken);
-    // console.log("decoded info", decoded);
     req.decoded_email = decoded.email;
     next();
   } catch (error) {
@@ -64,6 +63,7 @@ async function run() {
 
     const userCollections = database.collection("user");
     const requestCollections = database.collection("request");
+    const paymentCollection = database.collection("payments");
 
     app.post("/users", async (req, res) => {
       const userInfo = req.body;
@@ -160,6 +160,33 @@ async function run() {
       });
 
       res.send({ url: session.url });
+    });
+
+    app.post("/success-payment", async (req, res) => {
+      const { session_id } = req.query;
+      const session = await stripe.checkout.sessions.retrieve(session_id);
+      console.log(session);
+
+      const transactionId = session.payment_intent;
+
+      const isPaymentExist = await paymentCollection.findOne({ transactionId });
+
+      if (isPaymentExist) {
+        return;
+      }
+      if (session.payment_status == "paid") {
+        const paymentInfo = {
+          amount: session.amount_total / 100,
+          currency: session.currency,
+          donorEmail: session.customer_email,
+          transactionId,
+          payment_status: session.payment_status,
+          paidAt: new Date(),
+        };
+        const result = await paymentCollection.insertOne(paymentInfo);
+
+        return res.send(result);
+      }
     });
 
     await client.db("admin").command({ ping: 1 });
