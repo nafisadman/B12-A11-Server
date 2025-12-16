@@ -4,6 +4,9 @@ const cors = require("cors");
 require("dotenv").config();
 const port = process.env.PORT || 3000;
 
+const stripe = require("stripe")(process.env.STRIPE_KEY);
+const crypto = require("crypto");
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -18,7 +21,7 @@ const verifyFBToken = async (req, res, next) => {
   try {
     const idToken = token.split(" ")[1];
     const decoded = await admin.auth().verifyIdToken(idToken);
-    console.log("decoded info", decoded);
+    // console.log("decoded info", decoded);
     req.decoded_email = decoded.email;
     next();
   } catch (error) {
@@ -110,7 +113,7 @@ async function run() {
 
       const query = { email: email };
       const result = await userCollections.findOne(query);
-      console.log(result);
+      // console.log(result);
       res.send(result);
     });
 
@@ -126,6 +129,37 @@ async function run() {
 
       const result = await userCollections.updateOne(query, updateStatus);
       res.send(result);
+    });
+
+    // Stripe Payment
+    app.post("/create-payment-checkout", async (req, res) => {
+      const information = req.body;
+      const amount = parseInt(information.donateAmount) * 100;
+
+      const session = await stripe.checkout.sessions.create({
+        success_url: "https://example.com/success",
+        line_items: [
+          {
+            price_data: {
+              currency: "usd",
+              unit_amount: amount,
+              product_data: {
+                name: "Please Donate",
+              },
+            },
+            quantity: 1,
+          },
+        ],
+        mode: "payment",
+        metadata: {
+          donorName: information.donorName,
+        },
+        customer_email: information.donorEmail,
+        success_url: `${process.env.SITE_DOMAIN}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${process.env.SITE_DOMAIN}/payment-cancelled`,
+      });
+
+      res.send({ url: session.url });
     });
 
     await client.db("admin").command({ ping: 1 });
