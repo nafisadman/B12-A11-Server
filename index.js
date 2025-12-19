@@ -41,7 +41,7 @@ admin.initializeApp({
 });
 
 // MongoDB
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const uri = process.env.MONGO_URI;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -61,23 +61,25 @@ async function run() {
 
     const database = client.db("missionscic11mission");
 
-    const userCollections = database.collection("user");
-    const requestCollections = database.collection("request");
+    const usersCollection = database.collection("users");
+    const requestsCollection = database.collection("requests");
     const paymentCollection = database.collection("payments");
 
+    // Donor Registration
     app.post("/users", async (req, res) => {
       const userInfo = req.body;
       userInfo.createdAt = new Date();
       userInfo.role = "Donor";
       userInfo.status = "active";
 
-      const result = await userCollections.insertOne(userInfo);
+      const result = await usersCollection.insertOne(userInfo);
 
       res.send(result);
     });
 
+    // Registration
     app.get("/users", verifyFBToken, async (req, res) => {
-      const result = await userCollections.find().toArray();
+      const result = await usersCollection.find().toArray();
       res.status(200).send(result);
     });
 
@@ -85,25 +87,41 @@ async function run() {
     app.post("/requests", verifyFBToken, async (req, res) => {
       const data = req.body;
       data.createdAt = new Date();
-      const result = await requestCollections.insertOne(data);
+      const result = await requestsCollection.insertOne(data);
       res.send(result);
     });
 
-    // My Donation Requests
+    // Request Detail Page
+    app.get("/requests/:id", verifyFBToken, async (req, res) => {
+      const id = req.params.id;
+      const result = await requestsCollection.findOne({
+        _id: new ObjectId(id),
+      });
+      res.send(result);
+    });
+
+    // User Dashboard - My Donation Requests
     app.get("/my-donation-requests", verifyFBToken, async (req, res) => {
       const email = req.decoded_email;
       const page = Number(req.query.page);
       const size = Number(req.query.size);
+      const status = req.query.status;
+
+      console.log(status);
 
       const query = { requesterEmail: email };
 
-      const result = await requestCollections
+      if (status) {
+        query.request_status = status;
+      }
+
+      const result = await requestsCollection
         .find(query)
         .limit(size)
         .skip(page * size)
         .toArray();
 
-      const totalRequest = await requestCollections.countDocuments(query);
+      const totalRequest = await requestsCollection.countDocuments(query);
 
       res.send({ result: result, totalRequest });
     });
@@ -112,11 +130,34 @@ async function run() {
       const { email } = req.params;
 
       const query = { email: email };
-      const result = await userCollections.findOne(query);
-      // console.log(result);
+      const result = await usersCollection.findOne(query);
       res.send(result);
     });
 
+    // User request status change ig. pending / in progress / done
+    app.patch(
+      "/update/user/request-status",
+      verifyFBToken,
+      async (req, res) => {
+        const { _id, request_status } = req.query;
+        // console.log(_id, request_status); 676c5aef5c9384a8384b7d09 inprogress
+        const query = { _id: new ObjectId(_id) };
+
+        const updateRequestStatus = {
+          $set: {
+            request_status: request_status,
+          },
+        };
+
+        const result = await requestsCollection.updateOne(
+          query,
+          updateRequestStatus
+        );
+        res.send(result);
+      }
+    );
+
+    // User status change ig. block users
     app.patch("/update/user/status", verifyFBToken, async (req, res) => {
       const { email, status } = req.query;
       const query = { email: email };
@@ -127,11 +168,56 @@ async function run() {
         },
       };
 
-      const result = await userCollections.updateOne(query, updateStatus);
+      const result = await usersCollection.updateOne(query, updateStatus);
       res.send(result);
     });
 
-    // Stripe Payment
+    // User role change ig. make user to volunteer
+    app.patch("/update/user/role", verifyFBToken, async (req, res) => {
+      const { email, role } = req.query;
+      const query = { email: email };
+
+      const updatedRole = {
+        $set: {
+          role: role,
+        },
+      };
+
+      const result = await usersCollection.updateOne(query, updatedRole);
+      res.send(result);
+    });
+
+    // Homepage Search
+    app.get("/search-request", async (req, res) => {
+      const { blood, district, upazila, status } = req.query;
+
+      const query = {};
+
+      if (!query) {
+        return;
+      }
+
+      if (blood) {
+        query.bloodGroup = blood;
+      }
+
+      if (district) {
+        query.district = district;
+      }
+
+      if (upazila) {
+        query.upazila = upazila;
+      }
+
+      if (status) {
+        query.request_status = status;
+      }
+
+      const result = await requestsCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    // Homepage Donor - Stripe Payment
     app.post("/create-payment-checkout", async (req, res) => {
       const information = req.body;
       const amount = parseInt(information.donateAmount) * 100;
@@ -165,7 +251,6 @@ async function run() {
     app.post("/success-payment", async (req, res) => {
       const { session_id } = req.query;
       const session = await stripe.checkout.sessions.retrieve(session_id);
-      console.log(session);
 
       const transactionId = session.payment_intent;
 
