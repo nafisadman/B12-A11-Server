@@ -248,6 +248,22 @@ async function run() {
       res.send({ url: session.url });
     });
 
+    // Get blood donation requests information
+    app.get(
+      "/get-blood-donation-requests-info",
+      verifyFBToken,
+      async (req, res) => {
+        const result = await requestsCollection.find().toArray();
+        res.status(200).send(result);
+      }
+    );
+
+    // Get total funding information
+    app.get("/funding", verifyFBToken, async (req, res) => {
+      const result = await paymentCollection.find().toArray();
+      res.status(200).send(result);
+    });
+
     app.post("/success-payment", async (req, res) => {
       const { session_id } = req.query;
       const session = await stripe.checkout.sessions.retrieve(session_id);
