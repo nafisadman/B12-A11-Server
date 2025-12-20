@@ -100,6 +100,16 @@ async function run() {
       res.send(result);
     });
 
+    // User Dashboard - User's Last 3 Donation Requests
+    app.get(
+      "/my-donation-requests-recent",
+      verifyFBToken,
+      async (req, res) => {
+        const result = await requestsCollection.find().sort({ createdAt: -1 }).limit(3).toArray();
+        res.status(200).send(result);
+      }
+    );
+
     // User Dashboard - My Donation Requests
     app.get("/my-donation-requests", verifyFBToken, async (req, res) => {
       const email = req.decoded_email;
