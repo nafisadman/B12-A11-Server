@@ -77,11 +77,22 @@ async function run() {
       res.send(result);
     });
 
-    // Registration
+    // User Registration
     app.get("/users", verifyFBToken, async (req, res) => {
       const result = await usersCollection.find().toArray();
       res.status(200).send(result);
     });
+    
+    // User Update
+    app.get("/users/update", verifyFBToken, async (req, res) => {
+      const email = req.decoded_email;
+      // console.log(email); // user@email.com
+
+      const result = await usersCollection.findOne({ email });
+      res.status(200).send(result);
+    });
+
+
 
     // Requests
     app.post("/requests", verifyFBToken, async (req, res) => {
