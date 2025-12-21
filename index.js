@@ -82,8 +82,8 @@ async function run() {
       const result = await usersCollection.find().toArray();
       res.status(200).send(result);
     });
-    
-    // User Update
+
+    // Get data to show in User Update
     app.get("/users/update", verifyFBToken, async (req, res) => {
       const email = req.decoded_email;
       // console.log(email); // user@email.com
@@ -92,7 +92,26 @@ async function run() {
       res.status(200).send(result);
     });
 
+    // Push data in order to Update Database
+    app.patch("/users/:email", verifyFBToken, async (req, res) => {
+      const email = req.params.email;
+      const userData = req.body;
 
+      const query = { email: email };
+
+      const updateUserInfo = {
+        $set: {
+          name: userData.name,
+          bloodGroup: userData.bloodGroup,
+          district: userData.district,
+          upazila: userData.upazila,
+          userPhotoUrl: userData.userPhotoUrl,
+        },
+      };
+
+      const result = await usersCollection.updateOne(query, updateUserInfo);
+      res.send(result);
+    });
 
     // Requests
     app.post("/requests", verifyFBToken, async (req, res) => {
@@ -150,6 +169,25 @@ async function run() {
 
       res.send({ result: result, totalRequest });
     });
+
+    app.patch(
+      "/donation-request-status/:id",
+      verifyFBToken,
+      async (req, res) => {
+        const id = req.params.id;
+        const { status } = req.body; // We get 'done' or 'canceled' from here
+        const query = { _id: new ObjectId(id) };
+
+        const updateDoc = {
+          $set: {
+            request_status: status,
+          },
+        };
+
+        const result = await requestsCollection.updateOne(query, updateDoc);
+        res.send(result);
+      }
+    );
 
     app.get(`/users/role/:email`, async (req, res) => {
       const { email } = req.params;
