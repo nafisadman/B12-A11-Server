@@ -83,6 +83,15 @@ async function run() {
       res.status(200).send(result);
     });
 
+    // Get data to show in Requests Update
+    // app.get("/requests/update", verifyFBToken, async (req, res) => {
+    //   const email = req.decoded_email;
+    //   console.log(email);
+
+    //   const result = await requestsCollection.findOne({ email });
+    //   res.status(200).send(result);
+    // });
+
     // Get data to show in User Update
     app.get("/users/update", verifyFBToken, async (req, res) => {
       const email = req.decoded_email;
@@ -127,6 +136,23 @@ async function run() {
       const result = await requestsCollection.findOne({
         _id: new ObjectId(id),
       });
+      res.send(result);
+    });
+
+    // Update Requests
+    app.patch("/requests/:id", verifyFBToken, async (req, res) => {
+      const id = req.params.id;
+
+      const result = await requestsCollection.updateOne(
+        { _id: new ObjectId(id) },
+        {
+          $set: {
+            ...req.body,
+            updatedAt: new Date(),
+          },
+        }
+      );
+
       res.send(result);
     });
 
@@ -175,7 +201,7 @@ async function run() {
       verifyFBToken,
       async (req, res) => {
         const id = req.params.id;
-        const { status } = req.body; // We get 'done' or 'canceled' from here
+        const { status } = req.body;
         const query = { _id: new ObjectId(id) };
 
         const updateDoc = {
@@ -202,13 +228,15 @@ async function run() {
       "/update/user/request-status",
       verifyFBToken,
       async (req, res) => {
-        const { _id, request_status } = req.query;
+        const { _id, request_status, donor_name, donor_email } = req.query;
         // console.log(_id, request_status); 676c5aef5c9384a8384b7d09 inprogress
         const query = { _id: new ObjectId(_id) };
 
         const updateRequestStatus = {
           $set: {
             request_status: request_status,
+            donorName: donor_name,
+            donorEmail: donor_email,
           },
         };
 
