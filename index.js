@@ -156,6 +156,21 @@ async function run() {
       res.send(result);
     });
 
+    // Delete request
+    app.delete("/requests/:id", verifyFBToken, async (req, res) => {
+      const id = req.params.id;
+
+      const result = await requestsCollection.deleteOne({
+        _id: new ObjectId(id),
+      });
+
+      if (result.deletedCount === 0) {
+        return res.status(404).send({ message: "Request not found" });
+      }
+
+      res.send({ message: "Request deleted successfully" });
+    });
+
     // User Dashboard - User's Last 3 Donation Requests
     app.get("/my-donation-requests-recent", verifyFBToken, async (req, res) => {
       const email = req.decoded_email;
