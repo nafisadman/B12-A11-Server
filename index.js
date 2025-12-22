@@ -211,6 +211,33 @@ async function run() {
       res.send({ result: result, totalRequest });
     });
 
+    // Admin Dashboard - All Donation Requests
+    app.get(
+      "/admin/all-donation-requests",
+      verifyFBToken,
+      async (req, res) => {
+        const page = Number(req.query.page);
+        const size = Number(req.query.size);
+        const status = req.query.status;
+
+        const query = {};
+
+        if (status) {
+          query.request_status = status;
+        }
+
+        const result = await requestsCollection
+          .find(query)
+          .limit(size)
+          .skip(page * size)
+          .toArray();
+
+        const totalRequest = await requestsCollection.countDocuments(query);
+
+        res.send({ result, totalRequest });
+      }
+    );
+
     app.patch(
       "/donation-request-status/:id",
       verifyFBToken,
