@@ -1,3 +1,4 @@
 node_modules/
 .env
 b12-a11-client-firebase-adminsdk-fbsvc-818e3ba087.json
+.vercel
