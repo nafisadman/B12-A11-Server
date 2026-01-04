@@ -131,7 +131,7 @@ async function run() {
     });
 
     // Request Detail Page
-    app.get("/requests/:id", verifyFBToken, async (req, res) => {
+    app.get("/requests/:id", async (req, res) => {
       const id = req.params.id;
       const result = await requestsCollection.findOne({
         _id: new ObjectId(id),
